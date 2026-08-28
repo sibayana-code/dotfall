@@ -310,7 +310,7 @@
       path,
       step: 0,
       t: 0,
-      wait: 0.4,
+      wait: 0.5,
       el,
       gone: false,
     };
@@ -427,6 +427,10 @@
       if (enemy.gone) continue;
       if (enemy.wait > 0) {
         enemy.wait -= dt;
+        if (enemy.wait <= 0) {
+          const start = enemy.path[0];
+          if (owned[start] && start !== HOME) unownDot(start);
+        }
         placeEnemy(enemy);
         continue;
       }
