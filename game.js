@@ -5,17 +5,9 @@
   const FILL_TO_WIN = 22;
   const MAX_NIGHTS = 6;
   const FACTORY_CHANCE = 0.6;
-  const CLAIMS = [4, 4, 4, 3, 3, 3];
+  const CLAIMS = [7, 6, 5, 5, 4, 4];
   const ENEMIES = [5, 7, 9, 11, 13, 15];
-  const SPEED = [0.42, 0.55, 0.7, 0.9, 1.12, 1.36];
-  const SPAWN_GAP = [380, 300, 230, 180, 140, 110];
-  const SPEED_MUL = {
-    straight: 1,
-    diagonal: 1.12,
-    weave: 0.9,
-    curve: 0.96,
-    heavy: 0.5,
-  };
+  const SPEED = [0.5, 0.62, 0.78, 0.98, 1.22, 1.5];
   const FACTORY_SVG =
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#7c2d12" d="M3 20V11h5l3-5h2v5h8v9H3zm2-2h2v-3H5v3zm4 0h2v-3H9v3zm4 0h2v-3h-2v3zm4 0h2v-3h-2v3z"/><circle cx="8" cy="10" r="1.7" fill="#fff7ed"/><circle cx="13" cy="10" r="1.7" fill="#fff7ed"/></svg>';
 
@@ -448,27 +440,20 @@
   function pathForMotion(start, motion) {
     if (motion === "diagonal") return pathDiagonal(start);
     if (motion === "weave") return pathWeave(start);
-    if (motion === "curve") return pathCurve(start);
     return pathStraight(start);
   }
 
-  function motionFor(night, i, count) {
-    if (night <= 0) return i === count - 1 ? "diagonal" : "straight";
-    if (night === 1) return i % 2 === 0 ? "straight" : "diagonal";
-    if (night === 2) {
-      if (i === 0) return "heavy";
-      return ["straight", "diagonal", "weave"][i % 3];
+  function motionBag(count) {
+    const kinds = ["straight", "diagonal", "weave"];
+    const bag = [];
+    for (let i = 0; i < count; i++) bag.push(kinds[i % 3]);
+    for (let i = bag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = bag[i];
+      bag[i] = bag[j];
+      bag[j] = tmp;
     }
-    if (night === 3) {
-      if (i % 4 === 0) return "heavy";
-      return ["diagonal", "weave", "curve", "straight"][i % 4];
-    }
-    if (night === 4) {
-      if (i % 3 === 0) return "heavy";
-      return ["weave", "diagonal", "curve", "straight"][i % 4];
-    }
-    if (i % 3 === 0) return "heavy";
-    return ["weave", "diagonal", "curve"][i % 3];
+    return bag;
   }
 
   function edgeSpawns() {
@@ -499,16 +484,15 @@
     const path = pathForMotion(start, motion);
     const el = document.createElement("button");
     el.type = "button";
-    el.className = "enemy" + (motion === "heavy" ? " heavy" : "");
-    el.setAttribute("aria-label", motion === "heavy" ? "heavy balloon" : "balloon");
+    el.className = "enemy";
+    el.setAttribute("aria-label", "balloon");
     const enemy = {
       id: ++enemySeq,
       path,
       motion,
-      speedMul: SPEED_MUL[motion] || 1,
       step: 0,
       t: 0,
-      wait: motion === "heavy" ? 0.4 : 0.22,
+      wait: 0.22,
       el,
       gone: false,
     };
@@ -529,11 +513,10 @@
     const b = positions[enemy.path[Math.min(enemy.step + 1, enemy.path.length - 1)]];
     const x = a.x + (b.x - a.x) * enemy.t;
     const y = a.y + (b.y - a.y) * enemy.t;
-    const jig = enemy.motion === "heavy" ? 0 : ((enemy.id % 5) - 2) * 7;
+    const jig = ((enemy.id % 5) - 2) * 7;
     enemy.el.style.left = `${x + jig}px`;
     enemy.el.style.top = `${y}px`;
-    const scale = enemy.motion === "heavy" ? 1.42 : 1.08;
-    const s = Math.max(36, (a.size || 40) * scale);
+    const s = Math.max(36, (a.size || 40) * 1.08);
     enemy.el.style.width = `${s}px`;
     enemy.el.style.height = `${s}px`;
   }
@@ -591,15 +574,15 @@
       spots[i] = spots[j];
       spots[j] = tmp;
     }
-    const gap = SPAWN_GAP[Math.min(dayIndex, SPAWN_GAP.length - 1)];
+    const bag = motionBag(count);
     for (let i = 0; i < count; i++) {
       const start = spots[i % spots.length];
-      const motion = motionFor(dayIndex, i, count);
+      const motion = bag[i];
       setTimeout(() => {
         if (!playing || phase !== "night") return;
         spawnedCount += 1;
         spawnEnemy(start, motion);
-      }, 80 + i * gap);
+      }, 70 + Math.floor(i / 2) * 160);
     }
   }
 
@@ -629,7 +612,7 @@
     const dt = Math.min(0.05, (ts - lastTs) / 1000);
     lastTs = ts;
     if (!playing || phase !== "night") return;
-    const base = SPEED[Math.min(dayIndex, SPEED.length - 1)];
+    const speed = SPEED[Math.min(dayIndex, SPEED.length - 1)];
     for (const enemy of [...enemies]) {
       if (enemy.gone) continue;
       if (enemy.wait > 0) {
@@ -638,10 +621,6 @@
           const start = enemy.path[0];
           if (owned[start] && start !== HOME) {
             unownDot(start);
-            if (enemy.motion === "heavy") {
-              placeEnemy(enemy);
-              continue;
-            }
             popEnemy(enemy);
             continue;
           }
@@ -651,7 +630,7 @@
       }
       const here = enemy.path[enemy.step];
       const slow = owned[here] ? 0.7 : 1;
-      enemy.t += dt * base * (enemy.speedMul || 1) * slow;
+      enemy.t += dt * speed * slow;
       while (enemy.t >= 1) {
         enemy.t -= 1;
         enemy.step += 1;
@@ -665,10 +644,8 @@
         const landed = enemy.path[enemy.step];
         if (owned[landed] && landed !== HOME) {
           unownDot(landed);
-          if (enemy.motion !== "heavy") {
-            popEnemy(enemy);
-            break;
-          }
+          popEnemy(enemy);
+          break;
         }
       }
       placeEnemy(enemy);
