@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#7ec8e3" />
+    <title>Dotfall</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='28' fill='%232dd4bf'/><circle cx='32' cy='32' r='12' fill='%23fbbf24'/></svg>" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="top">
+        <div class="brand">
+          <span class="logo" aria-hidden="true"></span>
+          <h1>Dotfall</h1>
+        </div>
+        <div class="phase" id="phase" aria-live="polite">
+          <span class="phase-icon" id="phaseIcon">☀️</span>
+          <span id="phaseNum">1</span>
+        </div>
+      </header>
+
+      <p class="help" id="help">Tap a neighbor to take it</p>
+      <div class="tokens" id="tokens" aria-hidden="true"></div>
+      <div class="meter" id="meter" aria-label="coverage"></div>
+
+      <div id="board" aria-label="Dotfall field">
+        <svg id="edges" aria-hidden="true"></svg>
+        <div id="nodes"></div>
+        <div id="fx"></div>
+        <div id="enemies"></div>
+      </div>
+    </div>
+
+    <div id="overlay" class="hidden" role="dialog" aria-modal="true">
+      <div class="card">
+        <div class="card-mark" id="cardMark">★</div>
+        <h2 id="cardTitle">You win!</h2>
+        <button type="button" id="again">Play again</button>
+      </div>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>
