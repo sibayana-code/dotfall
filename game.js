@@ -4,11 +4,12 @@
   const HOME = 3 + 4 * COLS;
   const FILL_TO_WIN = 22;
   const MAX_NIGHTS = 6;
+  const FACTORY_CHANCE = 0.6;
   const CLAIMS = [7, 6, 5, 5, 4, 4];
   const ENEMIES = [5, 7, 9, 11, 13, 15];
   const SPEED = [0.5, 0.62, 0.78, 0.98, 1.22, 1.5];
   const FACTORY_SVG =
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#7c2d12" d="M3 20V11h5l3-5h2v5h8v9H3zm2-2h2v-3H5v3zm4 0h2v-3H9v3zm4 0h2v-3h-2v3zm4 0h2v-3h-2v3z"/></svg>';
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#7c2d12" d="M3 20V11h5l3-5h2v5h8v9H3zm2-2h2v-3H5v3zm4 0h2v-3H9v3zm4 0h2v-3h-2v3zm4 0h2v-3h-2v3z"/><circle cx="8" cy="10" r="1.7" fill="#fff7ed"/><circle cx="13" cy="10" r="1.7" fill="#fff7ed"/></svg>';
 
   const board = document.getElementById("board");
   const nodesEl = document.getElementById("nodes");
@@ -23,6 +24,7 @@
   const cardTitle = document.getElementById("cardTitle");
   const cardMark = document.getElementById("cardMark");
   const again = document.getElementById("again");
+  const meterEl = document.getElementById("meter");
 
   let owned;
   let factory;
@@ -90,6 +92,8 @@
   }
 
   function pickFactory() {
+    factory = -1;
+    if (Math.random() >= FACTORY_CHANCE) return;
     const h = cell(HOME);
     const candidates = [];
     for (let i = 0; i < COLS * ROWS; i++) {
@@ -98,6 +102,7 @@
       if (Math.abs(p.c - h.c) + Math.abs(p.r - h.r) < 2) continue;
       candidates.push(i);
     }
+    if (!candidates.length) return;
     factory = candidates[Math.floor(Math.random() * candidates.length)];
   }
 
@@ -190,6 +195,11 @@
       el.style.top = `${p.y}px`;
       el.style.width = `${p.size}px`;
       el.style.height = `${p.size}px`;
+      if (i === factory) {
+        const big = Math.round(p.size * 1.28);
+        el.style.width = `${big}px`;
+        el.style.height = `${big}px`;
+      }
     }
   }
 
@@ -234,6 +244,13 @@
     } else {
       tokensEl.innerHTML = "";
     }
+    const got = coverage();
+    meterEl.innerHTML = "";
+    for (let i = 0; i < FILL_TO_WIN; i++) {
+      const pip = document.createElement("span");
+      pip.className = "pip" + (i < got ? " on" : "");
+      meterEl.appendChild(pip);
+    }
   }
 
   function burstAt(i, kind) {
@@ -257,6 +274,7 @@
     sfx("steal");
     layout();
     paintNodes();
+    paintHud();
   }
 
   function onNodeTap(i) {

@@ -129,9 +129,28 @@ body.night .phase {
   box-shadow: inset 0 0 0 2px #ffffff66;
 }
 
-.token.on {
+.meter {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-height: 8px;
+  margin-bottom: 6px;
+}
+
+.pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff66;
+}
+
+body.night .pip {
+  background: #ffffff33;
+}
+
+body.night .pip.on {
   background: var(--owned);
-  box-shadow: 0 0 0 2px #ffffff88;
 }
 
 #board {
