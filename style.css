@@ -177,8 +177,8 @@ body.night .phase {
 }
 
 .node.claimable {
-  background: var(--hint);
-  box-shadow: 0 3px 0 #e8c84a, 0 0 0 5px rgba(255, 213, 74, 0.45);
+  background: #ffffff;
+  box-shadow: 0 3px 0 #e8c84a, 0 0 0 6px rgba(255, 196, 0, 0.55);
   animation: hint 1.1s ease-in-out infinite;
 }
 

@@ -5,8 +5,8 @@
   const NIGHTS_TO_WIN = 3;
   const FILL_TO_WIN = 20;
   const CLAIMS = [6, 6, 7];
-  const ENEMIES = [3, 4, 5];
-  const SPEED = [0.52, 0.62, 0.72];
+  const ENEMIES = [2, 3, 4];
+  const SPEED = [0.28, 0.36, 0.44];
 
   const board = document.getElementById("board");
   const nodesEl = document.getElementById("nodes");
@@ -112,7 +112,7 @@
     const padY = Math.max(24, h * 0.07);
     const gapX = COLS === 1 ? 0 : (w - padX * 2) / (COLS - 1);
     const gapY = ROWS === 1 ? 0 : (h - padY * 2) / (ROWS - 1);
-    const size = Math.max(44, Math.min(76, Math.min(gapX, gapY) * 0.62));
+    const size = Math.max(48, Math.min(84, Math.min(gapX, gapY) * 0.7));
     positions = [];
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -188,6 +188,21 @@
     b.style.top = `${p.y}px`;
     fxEl.appendChild(b);
     setTimeout(() => b.remove(), 400);
+  }
+
+  function onNodeTap(i) {
+    if (!playing) return;
+    if (phase === "night") {
+      const hit = enemies.find((e) => {
+        if (e.gone) return false;
+        const a = e.path[e.step];
+        const b = e.path[Math.min(e.step + 1, e.path.length - 1)];
+        return a === i || b === i;
+      });
+      if (hit) popEnemy(hit);
+      return;
+    }
+    tryClaim(i);
   }
 
   function tryClaim(i) {
@@ -273,14 +288,17 @@
       path,
       step: 0,
       t: 0,
+      wait: 0.4,
       el,
       gone: false,
     };
-    el.addEventListener("pointerdown", (e) => {
+    const tap = (e) => {
       e.preventDefault();
       e.stopPropagation();
       popEnemy(enemy);
-    });
+    };
+    el.addEventListener("pointerdown", tap);
+    el.addEventListener("click", tap);
     enemiesEl.appendChild(el);
     enemies.push(enemy);
     placeEnemy(enemy);
@@ -293,7 +311,7 @@
     const y = a.y + (b.y - a.y) * enemy.t;
     enemy.el.style.left = `${x}px`;
     enemy.el.style.top = `${y}px`;
-    const s = Math.max(42, (a.size || 56) * 0.78);
+    const s = Math.max(52, (a.size || 56) * 0.92);
     enemy.el.style.width = `${s}px`;
     enemy.el.style.height = `${s}px`;
   }
@@ -351,7 +369,7 @@
         if (!playing || phase !== "night") return;
         spawnedCount += 1;
         spawnEnemy(start);
-      }, 280 + i * 650);
+      }, 450 + i * 900);
     }
   }
 
@@ -373,7 +391,6 @@
     cardTitle.textContent = won ? "You win!" : "Oh no!";
     cardMark.textContent = won ? "★" : "•";
     sfx(won ? "win" : "lose");
-    paintHud();
   }
 
   function tick(ts) {
@@ -385,6 +402,11 @@
     const speed = SPEED[Math.min(dayIndex, SPEED.length - 1)];
     for (const enemy of [...enemies]) {
       if (enemy.gone) continue;
+      if (enemy.wait > 0) {
+        enemy.wait -= dt;
+        placeEnemy(enemy);
+        continue;
+      }
       const here = enemy.path[enemy.step];
       const slow = owned[here] ? 0.48 : 1;
       enemy.t += dt * speed * slow;
@@ -438,7 +460,12 @@
       btn.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         ensureAudio();
-        tryClaim(i);
+        onNodeTap(i);
+      });
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        ensureAudio();
+        onNodeTap(i);
       });
       nodesEl.appendChild(btn);
       nodeEls.push(btn);
@@ -446,6 +473,11 @@
   }
 
   again.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    ensureAudio();
+    reset();
+  });
+  again.addEventListener("click", (e) => {
     e.preventDefault();
     ensureAudio();
     reset();
