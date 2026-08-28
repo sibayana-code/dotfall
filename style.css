@@ -280,6 +280,11 @@ body.night .pip.on {
   animation: bob 0.7s ease-in-out infinite;
 }
 
+.enemy.heavy {
+  background: radial-gradient(circle at 32% 28%, #ddd6fe 0 14%, #7c3aed 16% 100%);
+  box-shadow: 0 5px 0 #5b21b6, 0 10px 16px rgba(76, 29, 149, 0.35);
+}
+
 .enemy.zap {
   animation: zap 0.22s ease-out forwards;
 }

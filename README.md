@@ -18,10 +18,10 @@ That is the whole game: `index.html`, `style.css`, and `game.js`. Keep those thr
 ## How to play
 
 - **Day:** tap a glowing neighbor to take it. Claims are instant. Some games get an orange factory (bigger, two dots on it) at a random spot; taking it is worth 2 coverage, so it fills two pips toward 22.
-- **Night:** tap the bouncing balloons. If a balloon touches a teal dot, that dot pops and the balloon is gone. Tap first to keep your land. Losing the factory drops two coverage. The gold home still ends the game if a balloon reaches it.
+- **Night:** tap the bouncing balloons. Later nights send more, faster balloons with mixed paths (straight, diagonal, weave, curve) plus big slow heavies that chew more than one teal if you miss them. A normal balloon that hits teal pops that land and is gone. Tap first to keep your land. Losing the factory drops two coverage. The gold home still ends the game if a balloon reaches it.
 - **Win:** reach 22 coverage. A factory you own counts as two normal dots. Surviving nights is not an automatic win.
 - **Lose:** a balloon reaches the gold home, or night 6 ends with coverage under 22. Tap **Play again**.
 
-Days give 7, 6, 5, 5, 4, then 4 claims. Nights send 5, 7, 9, 11, 13, then 15 balloons.
+Days give 7, 6, 5, 5, 4, then 4 claims. Nights send 5, 7, 9, 11, 13, then 15 balloons, each night faster than the last.
 
 One line on screen is the reminder: *Tap a neighbor to take it* / *Tap the balloons!*

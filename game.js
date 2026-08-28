@@ -7,7 +7,15 @@
   const FACTORY_CHANCE = 0.6;
   const CLAIMS = [7, 6, 5, 5, 4, 4];
   const ENEMIES = [5, 7, 9, 11, 13, 15];
-  const SPEED = [0.5, 0.62, 0.78, 0.98, 1.22, 1.5];
+  const SPEED = [0.42, 0.55, 0.7, 0.9, 1.12, 1.36];
+  const SPAWN_GAP = [380, 300, 230, 180, 140, 110];
+  const SPEED_MUL = {
+    straight: 1,
+    diagonal: 1.12,
+    weave: 0.9,
+    curve: 0.96,
+    heavy: 0.5,
+  };
   const FACTORY_SVG =
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#7c2d12" d="M3 20V11h5l3-5h2v5h8v9H3zm2-2h2v-3H5v3zm4 0h2v-3H9v3zm4 0h2v-3h-2v3zm4 0h2v-3h-2v3z"/><circle cx="8" cy="10" r="1.7" fill="#fff7ed"/><circle cx="13" cy="10" r="1.7" fill="#fff7ed"/></svg>';
 
@@ -397,10 +405,70 @@
     return path;
   }
 
+  function pathCurve(start) {
+    const path = [start];
+    let cur = start;
+    let bend = 1;
+    const seen = new Set([start]);
+    const h = cell(HOME);
+    while (cur !== HOME && path.length < COLS * ROWS * 2) {
+      const { c, r } = cell(cur);
+      const dc = Math.sign(h.c - c);
+      const dr = Math.sign(h.r - r);
+      const order = [
+        at(c + dc, r + dr),
+        at(c + dc, r + bend),
+        at(c + bend, r + dr),
+        at(c + dc, r),
+        at(c, r + dr),
+      ];
+      let next = null;
+      for (const n of order) {
+        if (n == null || n === cur) continue;
+        const p = cell(n);
+        if (Math.abs(p.c - c) > 1 || Math.abs(p.r - r) > 1) continue;
+        if (n === HOME) {
+          next = n;
+          break;
+        }
+        if (!seen.has(n)) {
+          next = n;
+          break;
+        }
+      }
+      if (next == null) return path.concat(pathStraight(cur).slice(1));
+      path.push(next);
+      seen.add(next);
+      cur = next;
+      bend *= -1;
+    }
+    return path;
+  }
+
   function pathForMotion(start, motion) {
     if (motion === "diagonal") return pathDiagonal(start);
     if (motion === "weave") return pathWeave(start);
+    if (motion === "curve") return pathCurve(start);
     return pathStraight(start);
+  }
+
+  function motionFor(night, i, count) {
+    if (night <= 0) return i === count - 1 ? "diagonal" : "straight";
+    if (night === 1) return i % 2 === 0 ? "straight" : "diagonal";
+    if (night === 2) {
+      if (i === 0) return "heavy";
+      return ["straight", "diagonal", "weave"][i % 3];
+    }
+    if (night === 3) {
+      if (i % 4 === 0) return "heavy";
+      return ["diagonal", "weave", "curve", "straight"][i % 4];
+    }
+    if (night === 4) {
+      if (i % 3 === 0) return "heavy";
+      return ["weave", "diagonal", "curve", "straight"][i % 4];
+    }
+    if (i % 3 === 0) return "heavy";
+    return ["weave", "diagonal", "curve"][i % 3];
   }
 
   function edgeSpawns() {
@@ -431,14 +499,16 @@
     const path = pathForMotion(start, motion);
     const el = document.createElement("button");
     el.type = "button";
-    el.className = "enemy";
-    el.setAttribute("aria-label", "balloon");
+    el.className = "enemy" + (motion === "heavy" ? " heavy" : "");
+    el.setAttribute("aria-label", motion === "heavy" ? "heavy balloon" : "balloon");
     const enemy = {
       id: ++enemySeq,
       path,
+      motion,
+      speedMul: SPEED_MUL[motion] || 1,
       step: 0,
       t: 0,
-      wait: 0.28,
+      wait: motion === "heavy" ? 0.4 : 0.22,
       el,
       gone: false,
     };
@@ -459,10 +529,11 @@
     const b = positions[enemy.path[Math.min(enemy.step + 1, enemy.path.length - 1)]];
     const x = a.x + (b.x - a.x) * enemy.t;
     const y = a.y + (b.y - a.y) * enemy.t;
-    const jig = ((enemy.id % 5) - 2) * 7;
+    const jig = enemy.motion === "heavy" ? 0 : ((enemy.id % 5) - 2) * 7;
     enemy.el.style.left = `${x + jig}px`;
     enemy.el.style.top = `${y}px`;
-    const s = Math.max(36, (a.size || 40) * 1.08);
+    const scale = enemy.motion === "heavy" ? 1.42 : 1.08;
+    const s = Math.max(36, (a.size || 40) * scale);
     enemy.el.style.width = `${s}px`;
     enemy.el.style.height = `${s}px`;
   }
@@ -514,21 +585,21 @@
     spawnTotal = count;
     spawnedCount = 0;
     const spots = edgeSpawns();
-    const motions = ["straight", "diagonal", "weave"];
     for (let i = spots.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       const tmp = spots[i];
       spots[i] = spots[j];
       spots[j] = tmp;
     }
+    const gap = SPAWN_GAP[Math.min(dayIndex, SPAWN_GAP.length - 1)];
     for (let i = 0; i < count; i++) {
       const start = spots[i % spots.length];
-      const motion = motions[i % 3];
+      const motion = motionFor(dayIndex, i, count);
       setTimeout(() => {
         if (!playing || phase !== "night") return;
         spawnedCount += 1;
         spawnEnemy(start, motion);
-      }, 60 + Math.floor(i / 2) * 150);
+      }, 80 + i * gap);
     }
   }
 
@@ -558,7 +629,7 @@
     const dt = Math.min(0.05, (ts - lastTs) / 1000);
     lastTs = ts;
     if (!playing || phase !== "night") return;
-    const speed = SPEED[Math.min(dayIndex, SPEED.length - 1)];
+    const base = SPEED[Math.min(dayIndex, SPEED.length - 1)];
     for (const enemy of [...enemies]) {
       if (enemy.gone) continue;
       if (enemy.wait > 0) {
@@ -567,6 +638,10 @@
           const start = enemy.path[0];
           if (owned[start] && start !== HOME) {
             unownDot(start);
+            if (enemy.motion === "heavy") {
+              placeEnemy(enemy);
+              continue;
+            }
             popEnemy(enemy);
             continue;
           }
@@ -576,7 +651,7 @@
       }
       const here = enemy.path[enemy.step];
       const slow = owned[here] ? 0.7 : 1;
-      enemy.t += dt * speed * slow;
+      enemy.t += dt * base * (enemy.speedMul || 1) * slow;
       while (enemy.t >= 1) {
         enemy.t -= 1;
         enemy.step += 1;
@@ -590,8 +665,10 @@
         const landed = enemy.path[enemy.step];
         if (owned[landed] && landed !== HOME) {
           unownDot(landed);
-          popEnemy(enemy);
-          break;
+          if (enemy.motion !== "heavy") {
+            popEnemy(enemy);
+            break;
+          }
         }
       }
       placeEnemy(enemy);
