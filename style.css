@@ -156,6 +156,11 @@ body.night .phase {
   inset: 0;
 }
 
+#fx,
+#enemies {
+  pointer-events: none;
+}
+
 .node {
   position: absolute;
   border: 0;
@@ -169,6 +174,7 @@ body.night .phase {
   transform: translate(-50%, -50%);
   cursor: pointer;
   touch-action: manipulation;
+  pointer-events: auto;
 }
 
 .node.owned {
@@ -238,6 +244,7 @@ body.night .phase {
   z-index: 4;
   cursor: pointer;
   touch-action: manipulation;
+  pointer-events: auto;
   animation: bob 0.7s ease-in-out infinite;
 }
 
