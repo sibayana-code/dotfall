@@ -108,11 +108,16 @@
   function layout() {
     const w = board.clientWidth;
     const h = board.clientHeight;
-    const padX = Math.max(28, w * 0.08);
-    const padY = Math.max(24, h * 0.07);
-    const gapX = COLS === 1 ? 0 : (w - padX * 2) / (COLS - 1);
-    const gapY = ROWS === 1 ? 0 : (h - padY * 2) / (ROWS - 1);
-    const size = Math.max(48, Math.min(84, Math.min(gapX, gapY) * 0.7));
+    let padX = Math.max(36, w * 0.1);
+    let padY = Math.max(32, h * 0.08);
+    let gapX = COLS === 1 ? 0 : (w - padX * 2) / (COLS - 1);
+    let gapY = ROWS === 1 ? 0 : (h - padY * 2) / (ROWS - 1);
+    let size = Math.max(48, Math.min(80, Math.min(gapX, gapY) * 0.66));
+    padX = Math.max(padX, size / 2 + 10);
+    padY = Math.max(padY, size / 2 + 10);
+    gapX = COLS === 1 ? 0 : (w - padX * 2) / (COLS - 1);
+    gapY = ROWS === 1 ? 0 : (h - padY * 2) / (ROWS - 1);
+    size = Math.max(48, Math.min(80, Math.min(gapX, gapY) * 0.66));
     positions = [];
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -256,24 +261,26 @@
   }
 
   function edgeSpawns() {
-    const set = new Set();
+    const corners = [
+      idx(0, 0),
+      idx(COLS - 1, 0),
+      idx(0, ROWS - 1),
+      idx(COLS - 1, ROWS - 1),
+    ];
+    const rest = [];
     for (let c = 0; c < COLS; c++) {
-      set.add(idx(c, 0));
-      set.add(idx(c, ROWS - 1));
+      rest.push(idx(c, 0), idx(c, ROWS - 1));
     }
-    for (let r = 0; r < ROWS; r++) {
-      set.add(idx(0, r));
-      set.add(idx(COLS - 1, r));
+    for (let r = 1; r < ROWS - 1; r++) {
+      rest.push(idx(0, r), idx(COLS - 1, r));
     }
-    set.delete(HOME);
-    const list = [...set];
-    list.sort((a, b) => {
-      const da = Math.abs(cell(a).c - 2) + Math.abs(cell(a).r - 3);
-      const db = Math.abs(cell(b).c - 2) + Math.abs(cell(b).r - 3);
-      const ua = owned[a] ? 0 : 1;
-      const ub = owned[b] ? 0 : 1;
-      return ub - ua || db - da;
-    });
+    const seen = new Set();
+    const list = [];
+    for (const i of [...corners, ...rest]) {
+      if (i === HOME || seen.has(i)) continue;
+      seen.add(i);
+      list.push(i);
+    }
     return list;
   }
 
@@ -288,7 +295,7 @@
       path,
       step: 0,
       t: 0,
-      wait: 0.4,
+      wait: 0.55,
       el,
       gone: false,
     };
@@ -309,7 +316,8 @@
     const b = positions[enemy.path[Math.min(enemy.step + 1, enemy.path.length - 1)]];
     const x = a.x + (b.x - a.x) * enemy.t;
     const y = a.y + (b.y - a.y) * enemy.t;
-    enemy.el.style.left = `${x}px`;
+    const jig = ((enemy.id % 5) - 2) * 11;
+    enemy.el.style.left = `${x + jig}px`;
     enemy.el.style.top = `${y}px`;
     const s = Math.max(52, (a.size || 56) * 0.92);
     enemy.el.style.width = `${s}px`;
