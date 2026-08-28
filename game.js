@@ -1,12 +1,12 @@
 (() => {
-  const COLS = 5;
-  const ROWS = 6;
-  const HOME = 2 + 3 * COLS;
+  const COLS = 6;
+  const ROWS = 8;
+  const HOME = 3 + 4 * COLS;
   const NIGHTS_TO_WIN = 3;
-  const FILL_TO_WIN = 20;
-  const CLAIMS = [6, 6, 7];
-  const ENEMIES = [2, 3, 4];
-  const SPEED = [0.28, 0.36, 0.44];
+  const FILL_TO_WIN = 39;
+  const CLAIMS = [7, 8, 9];
+  const ENEMIES = [4, 6, 8];
+  const SPEED = [0.3, 0.38, 0.46];
 
   const board = document.getElementById("board");
   const nodesEl = document.getElementById("nodes");
@@ -98,6 +98,8 @@
       setTimeout(() => tone(784, 0.22, "triangle", 0.06), 180);
     } else if (kind === "lose") {
       tone(220, 0.28, "sine", 0.05);
+    } else if (kind === "steal") {
+      tone(196, 0.14, "sine", 0.05);
     } else if (kind === "night") {
       tone(392, 0.16, "sine", 0.04);
     } else if (kind === "day") {
@@ -112,12 +114,12 @@
     let padY = Math.max(32, h * 0.08);
     let gapX = COLS === 1 ? 0 : (w - padX * 2) / (COLS - 1);
     let gapY = ROWS === 1 ? 0 : (h - padY * 2) / (ROWS - 1);
-    let size = Math.max(48, Math.min(80, Math.min(gapX, gapY) * 0.66));
-    padX = Math.max(padX, size / 2 + 10);
-    padY = Math.max(padY, size / 2 + 10);
+    let size = Math.max(32, Math.min(52, Math.min(gapX, gapY) * 0.46));
+    padX = Math.max(padX, size / 2 + 8);
+    padY = Math.max(padY, size / 2 + 8);
     gapX = COLS === 1 ? 0 : (w - padX * 2) / (COLS - 1);
     gapY = ROWS === 1 ? 0 : (h - padY * 2) / (ROWS - 1);
-    size = Math.max(48, Math.min(80, Math.min(gapX, gapY) * 0.66));
+    size = Math.max(32, Math.min(52, Math.min(gapX, gapY) * 0.46));
     positions = [];
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
@@ -178,21 +180,34 @@
         tokensEl.appendChild(t);
       }
     } else if (phase === "night") {
-      helpEl.textContent = "Tap the blobs!";
+      helpEl.textContent = "Tap the balloons!";
       tokensEl.innerHTML = "";
     } else {
       tokensEl.innerHTML = "";
     }
   }
 
-  function burstAt(i) {
+  function burstAt(i, kind) {
     const p = positions[i];
     const b = document.createElement("div");
-    b.className = "burst";
+    b.className = "burst" + (kind === "steal" ? " steal" : "");
     b.style.left = `${p.x}px`;
     b.style.top = `${p.y}px`;
     fxEl.appendChild(b);
     setTimeout(() => b.remove(), 400);
+  }
+
+  function unownDot(i) {
+    if (i === HOME || !owned[i]) return;
+    owned[i] = false;
+    burstAt(i, "steal");
+    const el = nodeEls[i];
+    el.classList.remove("pop");
+    void el.offsetWidth;
+    el.classList.add("pop");
+    sfx("steal");
+    layout();
+    paintNodes();
   }
 
   function onNodeTap(i) {
@@ -289,13 +304,13 @@
     const el = document.createElement("button");
     el.type = "button";
     el.className = "enemy";
-    el.setAttribute("aria-label", "blob");
+    el.setAttribute("aria-label", "balloon");
     const enemy = {
       id: ++enemySeq,
       path,
       step: 0,
       t: 0,
-      wait: 0.55,
+      wait: 0.4,
       el,
       gone: false,
     };
@@ -316,10 +331,10 @@
     const b = positions[enemy.path[Math.min(enemy.step + 1, enemy.path.length - 1)]];
     const x = a.x + (b.x - a.x) * enemy.t;
     const y = a.y + (b.y - a.y) * enemy.t;
-    const jig = ((enemy.id % 5) - 2) * 11;
+    const jig = ((enemy.id % 5) - 2) * 7;
     enemy.el.style.left = `${x + jig}px`;
     enemy.el.style.top = `${y}px`;
-    const s = Math.max(52, (a.size || 56) * 0.92);
+    const s = Math.max(36, (a.size || 40) * 1.08);
     enemy.el.style.width = `${s}px`;
     enemy.el.style.height = `${s}px`;
   }
@@ -361,7 +376,7 @@
   function startNight() {
     phase = "night";
     document.body.classList.add("night");
-    helpEl.textContent = "Tap the blobs!";
+    helpEl.textContent = "Tap the balloons!";
     tokensEl.innerHTML = "";
     phaseIcon.textContent = "🌙";
     phaseNum.textContent = String(dayIndex + 1);
@@ -377,7 +392,7 @@
         if (!playing || phase !== "night") return;
         spawnedCount += 1;
         spawnEnemy(start);
-      }, 450 + i * 900);
+      }, 380 + i * 520);
     }
   }
 
@@ -416,7 +431,7 @@
         continue;
       }
       const here = enemy.path[enemy.step];
-      const slow = owned[here] ? 0.48 : 1;
+      const slow = owned[here] ? 0.7 : 1;
       enemy.t += dt * speed * slow;
       while (enemy.t >= 1) {
         enemy.t -= 1;
@@ -427,6 +442,12 @@
           enemies = enemies.filter((e) => e !== enemy);
           endGame(false);
           return;
+        }
+        const landed = enemy.path[enemy.step];
+        if (owned[landed] && landed !== HOME) {
+          unownDot(landed);
+          enemy.wait = 0.2;
+          break;
         }
       }
       placeEnemy(enemy);
