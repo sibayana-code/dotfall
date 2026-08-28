@@ -429,7 +429,11 @@
         enemy.wait -= dt;
         if (enemy.wait <= 0) {
           const start = enemy.path[0];
-          if (owned[start] && start !== HOME) unownDot(start);
+          if (owned[start] && start !== HOME) {
+            unownDot(start);
+            popEnemy(enemy);
+            continue;
+          }
         }
         placeEnemy(enemy);
         continue;
@@ -450,7 +454,7 @@
         const landed = enemy.path[enemy.step];
         if (owned[landed] && landed !== HOME) {
           unownDot(landed);
-          enemy.wait = 0.2;
+          popEnemy(enemy);
           break;
         }
       }
