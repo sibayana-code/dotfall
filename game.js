@@ -5,7 +5,7 @@
   const FILL_TO_WIN = 22;
   const MAX_NIGHTS = 6;
   const FACTORY_CHANCE = 0.6;
-  const CLAIMS = [7, 6, 5, 5, 4, 4];
+  const CLAIMS = [4, 4, 4, 3, 3, 3];
   const ENEMIES = [5, 7, 9, 11, 13, 15];
   const SPEED = [0.42, 0.55, 0.7, 0.9, 1.12, 1.36];
   const SPAWN_GAP = [380, 300, 230, 180, 140, 110];

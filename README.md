@@ -22,6 +22,6 @@ That is the whole game: `index.html`, `style.css`, and `game.js`. Keep those thr
 - **Win:** reach 22 coverage. A factory you own counts as two normal dots. Surviving nights is not an automatic win.
 - **Lose:** a balloon reaches the gold home, or night 6 ends with coverage under 22. Tap **Play again**.
 
-Days give 7, 6, 5, 5, 4, then 4 claims. Nights send 5, 7, 9, 11, 13, then 15 balloons, each night faster than the last.
+Days give 4, 4, 4, 3, 3, then 3 claims (the row of pips). Nights send 5, 7, 9, 11, 13, then 15 balloons, each night faster than the last.
 
 One line on screen is the reminder: *Tap a neighbor to take it* / *Tap the balloons!*
