@@ -2,11 +2,13 @@
   const COLS = 6;
   const ROWS = 8;
   const HOME = 3 + 4 * COLS;
-  const NIGHTS_TO_WIN = 3;
-  const FILL_TO_WIN = 39;
-  const CLAIMS = [7, 8, 9];
-  const ENEMIES = [4, 6, 8];
-  const SPEED = [0.3, 0.38, 0.46];
+  const FILL_TO_WIN = 22;
+  const MAX_NIGHTS = 6;
+  const CLAIMS = [7, 6, 5, 5, 4, 4];
+  const ENEMIES = [5, 7, 9, 11, 13, 15];
+  const SPEED = [0.5, 0.62, 0.78, 0.98, 1.22, 1.5];
+  const FACTORY_SVG =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#7c2d12" d="M3 20V11h5l3-5h2v5h8v9H3zm2-2h2v-3H5v3zm4 0h2v-3H9v3zm4 0h2v-3h-2v3zm4 0h2v-3h-2v3z"/></svg>';
 
   const board = document.getElementById("board");
   const nodesEl = document.getElementById("nodes");
@@ -23,6 +25,7 @@
   const again = document.getElementById("again");
 
   let owned;
+  let factory;
   let phase; // "day" | "night" | "end"
   let dayIndex;
   let claimsLeft;
@@ -40,6 +43,11 @@
     return r * COLS + c;
   }
 
+  function at(c, r) {
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return null;
+    return idx(c, r);
+  }
+
   function cell(i) {
     return { c: i % COLS, r: Math.floor(i / COLS) };
   }
@@ -54,12 +62,43 @@
     return out;
   }
 
+  function neighbors8(i) {
+    const { c, r } = cell(i);
+    const out = [];
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (!dc && !dr) continue;
+        const nc = c + dc;
+        const nr = r + dr;
+        if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) out.push(idx(nc, nr));
+      }
+    }
+    return out;
+  }
+
   function isClaimable(i) {
     return !owned[i] && neighbors(i).some((n) => owned[n]);
   }
 
-  function ownedCount() {
-    return owned.reduce((n, v) => n + (v ? 1 : 0), 0);
+  function coverage() {
+    let n = 0;
+    for (let i = 0; i < owned.length; i++) {
+      if (!owned[i]) continue;
+      n += i === factory ? 2 : 1;
+    }
+    return n;
+  }
+
+  function pickFactory() {
+    const h = cell(HOME);
+    const candidates = [];
+    for (let i = 0; i < COLS * ROWS; i++) {
+      if (i === HOME) continue;
+      const p = cell(i);
+      if (Math.abs(p.c - h.c) + Math.abs(p.r - h.r) < 2) continue;
+      candidates.push(i);
+    }
+    factory = candidates[Math.floor(Math.random() * candidates.length)];
   }
 
   function ensureAudio() {
@@ -159,10 +198,20 @@
       const el = nodeEls[i];
       el.classList.toggle("owned", owned[i]);
       el.classList.toggle("home", i === HOME);
+      el.classList.toggle("factory", i === factory);
       el.classList.toggle(
         "claimable",
         phase === "day" && isClaimable(i)
       );
+      if (i !== HOME) {
+        el.setAttribute("aria-label", i === factory ? "factory" : "dot");
+      }
+      if (i === HOME) continue;
+      if (i === factory) {
+        if (!el.querySelector("svg")) el.innerHTML = FACTORY_SVG;
+      } else if (el.querySelector("svg")) {
+        el.innerHTML = "";
+      }
     }
   }
 
@@ -240,7 +289,7 @@
     layout();
     paintNodes();
     paintHud();
-    if (ownedCount() >= FILL_TO_WIN) {
+    if (coverage() >= FILL_TO_WIN) {
       endGame(true);
       return;
     }
@@ -251,13 +300,13 @@
     }
   }
 
-  function pathToHome(start) {
+  function bfsPath(start, adjacent) {
     const prev = new Map([[start, null]]);
     const q = [start];
     while (q.length) {
       const cur = q.shift();
       if (cur === HOME) break;
-      for (const n of neighbors(cur)) {
+      for (const n of adjacent(cur)) {
         if (!prev.has(n)) {
           prev.set(n, cur);
           q.push(n);
@@ -273,6 +322,67 @@
     }
     path.reverse();
     return path;
+  }
+
+  function pathStraight(start) {
+    return bfsPath(start, neighbors);
+  }
+
+  function pathDiagonal(start) {
+    return bfsPath(start, neighbors8);
+  }
+
+  function pathWeave(start) {
+    const path = [start];
+    let cur = start;
+    let side = 1;
+    const seen = new Set([start]);
+    const h = cell(HOME);
+    while (cur !== HOME && path.length < COLS * ROWS * 2) {
+      const { c, r } = cell(cur);
+      const dc = Math.sign(h.c - c);
+      const dr = Math.sign(h.r - r);
+      const order = [];
+      if (path.length % 2 === 0) {
+        if (dc) order.push(at(c + dc, r + side));
+        if (dr) order.push(at(c + side, r + dr));
+        if (dc) order.push(at(c + dc, r));
+        if (dr) order.push(at(c, r + dr));
+      } else {
+        if (dc) order.push(at(c + dc, r));
+        if (dr) order.push(at(c, r + dr));
+        if (dc && dr) order.push(at(c + dc, r + dr));
+      }
+      if (dc && dr) order.push(at(c + dc, r + dr));
+      let next = null;
+      for (const n of order) {
+        if (n == null || n === cur) continue;
+        const p = cell(n);
+        if (Math.abs(p.c - c) > 1 || Math.abs(p.r - r) > 1) continue;
+        if (n === HOME) {
+          next = n;
+          break;
+        }
+        if (!seen.has(n)) {
+          next = n;
+          break;
+        }
+      }
+      if (next == null) {
+        return path.concat(pathStraight(cur).slice(1));
+      }
+      path.push(next);
+      seen.add(next);
+      cur = next;
+      side *= -1;
+    }
+    return path;
+  }
+
+  function pathForMotion(start, motion) {
+    if (motion === "diagonal") return pathDiagonal(start);
+    if (motion === "weave") return pathWeave(start);
+    return pathStraight(start);
   }
 
   function edgeSpawns() {
@@ -299,8 +409,8 @@
     return list;
   }
 
-  function spawnEnemy(start) {
-    const path = pathToHome(start);
+  function spawnEnemy(start, motion) {
+    const path = pathForMotion(start, motion);
     const el = document.createElement("button");
     el.type = "button";
     el.className = "enemy";
@@ -310,7 +420,7 @@
       path,
       step: 0,
       t: 0,
-      wait: 0.5,
+      wait: 0.28,
       el,
       gone: false,
     };
@@ -386,19 +496,27 @@
     spawnTotal = count;
     spawnedCount = 0;
     const spots = edgeSpawns();
+    const motions = ["straight", "diagonal", "weave"];
+    for (let i = spots.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = spots[i];
+      spots[i] = spots[j];
+      spots[j] = tmp;
+    }
     for (let i = 0; i < count; i++) {
       const start = spots[i % spots.length];
+      const motion = motions[i % 3];
       setTimeout(() => {
         if (!playing || phase !== "night") return;
         spawnedCount += 1;
-        spawnEnemy(start);
-      }, 380 + i * 520);
+        spawnEnemy(start, motion);
+      }, 60 + Math.floor(i / 2) * 150);
     }
   }
 
   function surviveNight() {
-    if (dayIndex + 1 >= NIGHTS_TO_WIN) {
-      endGame(true);
+    if (dayIndex + 1 >= MAX_NIGHTS) {
+      endGame(coverage() >= FILL_TO_WIN);
       return;
     }
     dayIndex += 1;
@@ -465,6 +583,7 @@
   function reset() {
     owned = Array(COLS * ROWS).fill(false);
     owned[HOME] = true;
+    pickFactory();
     phase = "day";
     dayIndex = 0;
     claimsLeft = CLAIMS[0];
@@ -489,7 +608,10 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "node";
-      btn.setAttribute("aria-label", i === HOME ? "home" : "dot");
+      btn.setAttribute(
+        "aria-label",
+        i === HOME ? "home" : "dot"
+      );
       if (i === HOME) {
         btn.innerHTML =
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#b45309" d="M12 4 3 12h2.5v8h5v-5h3v5h5v-8H21z"/></svg>';

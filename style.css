@@ -196,9 +196,22 @@ body.night .phase {
   place-items: center;
 }
 
-.node.home svg {
-  width: 54%;
-  height: 54%;
+.node.factory {
+  background: radial-gradient(circle at 32% 28%, #ffedd5 0 16%, #fb923c 19% 100%);
+  box-shadow: 0 2px 0 #c2410c, 0 0 0 3px rgba(251, 146, 60, 0.45);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+}
+
+.node.factory.owned {
+  box-shadow: 0 2px 0 #c2410c, 0 0 0 3px rgba(45, 212, 191, 0.55);
+}
+
+.node.home svg,
+.node.factory svg {
+  width: 58%;
+  height: 58%;
   pointer-events: none;
 }
 
